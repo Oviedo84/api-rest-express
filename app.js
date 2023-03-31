@@ -1,6 +1,7 @@
 const inicioDebug = require('debug')('app:inicio'); // Importar el paquete debug
                                     // El parámetro indica el archivo y el entorno de depuración
 const dbDebug = require('debug')('app:db');
+const usuarios = require('./routes/usuarios');
 const express = require('express'); // Importa el paquete express
 const config = require('config'); // Importa el paquete config
 const { exist } = require('joi');
@@ -27,6 +28,12 @@ app.use(express.urlencoded({extended: true})); // Nuevo Middleware
 app.use(express.static('public')); // Nombre de la carpeta que tendrá los archivos
                                    // (Recursos estáticos)
 
+app.use('/api/usuarios', usuarios); // Middleware que importamos
+// El primer parámetro es la ruta raíz asociada
+// con las peticiones a los datos de usuarios
+// La ruta raíz definida 
+
+
 console.log(`Aplicación: ${config.get('nombre')}`);
 console.log(`DB Server: ${config.get('configDB.host')}`);
 
@@ -47,26 +54,6 @@ dbDebug('Conectando con la base de datos...');
 //     next();
 // })
 
-// Los tres app.use() son middleware y se llaman antes de las funciones
-// de ruta GET, POST, PUT, DELETE para que éstas puedan trabajar
-
-const usuarios = [
-    {id:1, nombre: 'Juan'},
-    {id:2, nombre: 'Karen'},
-    {id:3, nombre: 'Diego'},
-    {id:4, nombre: 'Luis'}
-];
-
-function existeUsuario(id){
-    return(usuarios.find(u => u.id === parseInt(id)));
-}
-
-function validarUsuario(nom){
-    const schema = joi.object({
-        nombre: joi.string().min(3).required()
-    });
-    return(schema.validate({nombre: nom}));
-}
 
 // Consulta en la ruta raíz del sitio
 // Toda petición siempre va a recibir dos parámetros (objetos)
@@ -77,110 +64,15 @@ app.get('/', (req, res) => {
     res.send('Hola mundo desde Express!!');
 });
 
-app.get('/api/usuarios', (req, res) => {
-    res.send(usuarios);
-});
-
-// Con los dos puntos delente del id
-// Express sabe que es un parámetro a recibir en la ruta
-app.get('/api/usuarios/:id', (req, res) => {
-    // En el cuerpo del objeto req está la propiedad 
-    // params, que guarda los parámetros enviados
-    // res.send(req.params.id);
-    // Los parámetros en req.params se reciben como strings
-    // parseInt, hace el casteo a valores enteros directamente
-    const id = req.params.id;
-    const usuario = existeUsuario(id);
-    if(!usuario){
-        res.status(404).send(`El usuarios ${id} no se encuentra!`);
-        return;
-        // Devuelve el estado HTTP 404
-    }
-    res.send(usuario);
-});
-
-
 // Recibiendo varios parámetros
 // Se pasan dos parámetros, year y month
 // Query string
 // localhost:5000/api/usuarios/1990/2/?nombre=xxxx&single=y
-app.get('/api/usuarios/:year/:month', (req, res) => {
-    // En el cuerpo de req está la propiedad
-    // query, que guarda los parámetros Query String.
-    res.send(req.query);
-});
-
-// La ruta tiene el mismo nombre que la petición GET
-// Express hace la diferencia dependiendo del tipo 
-// de petición.
-// La petición POST se utilizará para insertar
-// un nuevo usario en nuestro arreglo.
-app.post('/api/usuarios', (req, res) => {
-    // El objeto request tiene la propiedad body
-    // que va a venir en formato JSON
-    // Creación del schema con Joi
-    const {error, value} = validarUsuario(req.body.nombre);
-    if(!error){
-        const usuario = {
-            id: usuarios.length + 1,
-            nombre: req.body.nombre
-        };
-        usuarios.push(usuario);
-        res.send(usuario);    
-    }
-    else{
-        res.status(400).send(error.details[0].message);
-    }
-    return;
-    // if(!req.body.nombre || req.body.nombre.length <= 2){
-    //     // Código 400: Bad Request
-    //     res.status(400).send('Debe ingresar un nombre que tenga al menos tres letras.');
-    //     return; // Es necesario para que no continúe con el método
-    // }
-    // const usuario = {
-    //     id: usuarios.length + 1,
-    //     nombre: req.body.nombre
-    // };
-    // usuarios.push(usuario);
-    // res.send(usuario);
-});
-
-// Petición para modificar datos existentes
-// este método debe recibir un parámetro
-// id para saber qué usuario modificar
-app.put('/api/usuarios/:id', (req, res) => {
-    // Encontrar si existe el usuario a modificar
-    let usuario = existeUsuario(req.params.id);
-    if(!usuario){
-        res.status(404).send('El usuario no se encuentra'); // Devuelve el estado HTTP
-        return;
-    }
-    // validar si el dato recibido es correcto
-    const {error, value} = validarUsuario(req.body.nombre);
-    if(!error){
-        // Actualiza el nombre
-        usuario.nombre = value.nombre;
-        res.send(usuario);
-    }
-    else{
-        const mensaje = error.details[0].message;
-        res.status(400).send(mensaje);
-    }
-    return;
-});
-
-// Recibe como parámetro el id del usuario se va a eliminar
-app.delete('/api/usuarios/:id', (req, res) => {
-    const usuario = existeUsuario(req.params.id);
-    if(!usuario){
-        res.status(404).send('El usuario no se encuentra'); // Devuelve el estado HTTP
-        return;
-    }
-    // Encontrar el índice del usuario dentro del arreglo
-    const index = usuarios.indexOf(usuario);
-    usuarios.splice(index, 1); // Elimina el elemento en el índice
-    res.send(usuario); // Se responde con el usuario eliminado
-});
+// app.get('/api/usuarios/:year/:month', (req, res) => {
+//     // En el cuerpo de req está la propiedad
+//     // query, que guarda los parámetros Query String.
+//     res.send(req.query);
+// });
 
 app.get('/api/productos', (req, res) => {
     res.send(['mouse', 'teclado', 'bocinas']);
